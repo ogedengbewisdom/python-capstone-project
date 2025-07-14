@@ -9,10 +9,23 @@ on:
 jobs:
   run-tests:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install python-bitcoinrpc
 
       - name: Set up Docker
         uses: docker/setup-buildx-action@v3
@@ -36,7 +49,7 @@ jobs:
         run: |
           export NVM_DIR="$HOME/.nvm"
           [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-          bash test.sh
+          ./test.sh
 
       - name: Check result
         if: ${{ failure() }}

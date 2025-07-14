@@ -71,6 +71,8 @@ If your code works, you will see the test completed successfully.
   - Check the status of the autograder on Github Actions to see if it passed successfully or failed.
   - You can submit multiple times before the deadline. The latest submission before the deadline will be considered your final submission.
 
+Submit your final solution link to this form: [Google form](https://forms.gle/5b3ETjSwdhKjePHU9).
+
 ### Common Issues
 - Your submission should not stop the Bitcoin Core daemon at any point.
 - Linux and MacOS are the recommended operating systems for this challenge. If you are using Windows, you may face compatibility issues.

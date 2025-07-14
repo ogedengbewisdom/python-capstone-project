@@ -91,3 +91,9 @@ You may use AI tools like ChatGPT to gather information and explore alternative 
 
 ## Why These Restrictions?
 These rules are designed to enhance your understanding of the technical aspects of Bitcoin. By completing this assignment, you gain practical experience with the technology that secures and maintains the trustlessness of Bitcoin. This challenge not only tests your ability to develop functional Bitcoin applications but also encourages deep engagement with the core elements of Bitcoin technology.
+
+### Additional Resources
+- [python-bitcoinrpc](https://github.com/jgarzik/python-bitcoinrpc)
+- [Bitcoin Core Documentation](https://developer.bitcoin.org/)
+- [Learning Bitcoin from the Command Line](https://github.com/BlockchainCommons/Learning-Bitcoin-from-the-Command-Line)
+- [Bitcoin Core RPC Documentation](https://developer.bitcoin.org/reference/rpc/)

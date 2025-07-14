@@ -28,7 +28,8 @@ def main():
         # Extract all required transaction details.
 
         # Write the data to ../out.txt in the specified format given in readme.md.
+    except Exception as e:
+        print("Error occurred: {}".format(e))
 
 if __name__ == "__main__":
     main()
-

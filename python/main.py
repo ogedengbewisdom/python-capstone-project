@@ -1,5 +1,5 @@
 from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
-
+from decimal import Decimal
 # Node access params
 RPC_URL = "http://alice:password@127.0.0.1:18443"
 
@@ -89,12 +89,8 @@ def main():
         client.generatetoaddress(1, miner_address)
 
         # Extract all required transaction details.
-
-        # print("TX_ID", tx_id)
-
         try:
             raw_tx = get_raw_tx(client, tx_id)
-            print("raw_tx", raw_tx)
         except:
             raise ValueError(f"Cant get transaction for {tx_id}")
         
@@ -107,30 +103,31 @@ def main():
             raise ValueError(f"Can't get previous transaction for {prev_tx_id}")
 
         txid = raw_tx["txid"]
+        minerInputAmount = str(prev_tx["vout"][int(prev_tx_vout)]["value"])
+        traderInputAmount = str(raw_tx["vout"][0]["value"])
+        minerChangeAmount = str(raw_tx["vout"][1]["value"])
+        fee = str(Decimal(minerInputAmount) - (Decimal(traderInputAmount) + Decimal(minerChangeAmount)))
+
+        txid = raw_tx["txid"]
         minerInputAddress = prev_tx["vout"][int(prev_tx_vout)]["scriptPubKey"]["address"]
-        minerInputAmount = prev_tx["vout"][int(prev_tx_vout)]["value"]
         traderInputAddress = raw_tx["vout"][0]["scriptPubKey"]["address"]
-        traderInputAmount = raw_tx["vout"][0]["value"]
         minerChangeAddress = raw_tx["vout"][1]["scriptPubKey"]["address"]
-        minerChangeAmount = raw_tx["vout"][1]["value"]
-        fee = minerInputAmount - (traderInputAmount + minerChangeAmount)
         blockHash = raw_tx["blockhash"]
         block_info = client.getblock(blockHash)
         blockHeight = block_info["height"]
-        tx = raw_tx
 
         # Write the data to ../out.txt in the specified format given in readme.md.
         with open("../out.txt", "w") as f:
-            f.write(str(tx_id) + "\n")
-            f.write(str(minerInputAddress) + "\n")
-            f.write(str(minerInputAmount) + "\n")
-            f.write(str(traderInputAddress) + "\n")
-            f.write(str(traderInputAmount) + "\n")
-            f.write(str(minerChangeAddress) + "\n")
-            f.write(str(minerChangeAmount) + "\n")
-            f.write(str(fee) + "\n")
+            f.write(txid + "\n")
+            f.write(minerInputAddress + "\n")
+            f.write(minerInputAmount + "\n")
+            f.write(traderInputAddress + "\n")
+            f.write(traderInputAmount + "\n")
+            f.write(minerChangeAddress + "\n")
+            f.write(minerChangeAmount + "\n")
+            f.write(fee + "\n")
             f.write(str(blockHeight) + "\n")
-            f.write(str(blockHash) + "\n")
+            f.write(blockHash + "\n")
     except Exception as e:
         print("Error occurred: {}".format(e))
 

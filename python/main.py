@@ -1,5 +1,5 @@
 from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
-from decimal import Decimal
+
 # Node access params
 RPC_URL = "http://alice:password@127.0.0.1:18443"
 
@@ -37,12 +37,20 @@ def check_mempool(client, tx_id):
     
 
 
-def get_raw_tx(client, tx_id):
+def get_tx(client, tx_id):
     try:
-        tx_details = client.getrawtransaction(tx_id, True)
+        # Get transaction with verbose details and include watch-only
+        tx_details = client.gettransaction(tx_id, None, True)
         return tx_details
-    except:
-        raise ValueError(f"Can't get taw transaction for {tx_id}")
+    except Exception as e:
+        raise ValueError(f"Can't get transaction for {tx_id} Error: {e}")
+    
+def decode_raw_tx(client, hex):
+    try:
+        raw_tx = client.decoderawtransaction(hex)
+        return raw_tx
+    except Exception as e:
+        raise ValueError(f"{e}")
 
 def main():
     try:
@@ -51,83 +59,90 @@ def main():
 
         # Get blockchain info
         blockchain_info = client.getblockchaininfo()
-
         # print("Blockchain Info:", blockchain_info)
-
-        
 
         # Create/Load the wallets, named 'Miner' and 'Trader'. Have logic to optionally create/load them if they do not exist or are not loaded already.
 
         miner_wallet = create_wallet(client, "Miner")
         trader_wallet = create_wallet(client, "Trader")
-
         miner_client = AuthServiceProxy(f"{RPC_URL}/wallet/{miner_wallet}")
         # trader_client = AuthServiceProxy(f"{RPC_URL}/wallet/{trader_wallet}")
 
         # Generate spendable balances in the Miner wallet. Determine how many blocks need to be mined.
-
         miner_address = miner_client.getnewaddress()
 
         if client.getblockcount() < 101:
             client.generatetoaddress(101, miner_address)
 
         # Load the Trader wallet and generate a new address.
-
-        # load_trader_wallet = create_wallet(client, "Trader")
         load_trader_client = AuthServiceProxy(f"{RPC_URL}/wallet/{trader_wallet}")
         trader_address = load_trader_client.getnewaddress()
+
         # Send 20 BTC from Miner to Trader.
-
         tx_id = miner_client.sendtoaddress(trader_address, 20)
+    
         # Check the transaction in the mempool.
-
         try:
             mempool_tx = check_mempool(client, tx_id)
         except:
             raise(f"an error occured")
 
+        # Mine a block to confirm the transaction
+        # block_hash = client.generatetoaddress(1, miner_address)[0]
         client.generatetoaddress(1, miner_address)
 
+        
         # Extract all required transaction details.
         try:
-            raw_tx = get_raw_tx(client, tx_id)
-        except:
-            raise ValueError(f"Cant get transaction for {tx_id}")
+            transaction = get_tx(miner_client, tx_id)
+        except Exception as e:
+            raise ValueError(f"{e}")
+        
+        hex = transaction["hex"]
+        
+        try:
+            decoded_tx = decode_raw_tx(miner_client, hex)
+        except Exception as e:
+            raise ValueError(f"{e}")
         
 
-        prev_tx_id = raw_tx["vin"][0]["txid"]
-        prev_tx_vout = raw_tx["vin"][0]["vout"]
+        prev_tx_id = decoded_tx["vin"][0]["txid"]
+        prev_tx_vout = decoded_tx["vin"][0]["vout"]
         try:
-            prev_tx = get_raw_tx(client, prev_tx_id)
+            prev_tx = get_tx(miner_client, prev_tx_id)
         except:
             raise ValueError(f"Can't get previous transaction for {prev_tx_id}")
 
-        txid = raw_tx["txid"]
-        minerInputAmount = str(prev_tx["vout"][int(prev_tx_vout)]["value"])
-        traderInputAmount = str(raw_tx["vout"][0]["value"])
-        minerChangeAmount = str(raw_tx["vout"][1]["value"])
-        fee = str(Decimal(minerInputAmount) - (Decimal(traderInputAmount) + Decimal(minerChangeAmount)))
 
-        txid = raw_tx["txid"]
-        minerInputAddress = prev_tx["vout"][int(prev_tx_vout)]["scriptPubKey"]["address"]
-        traderInputAddress = raw_tx["vout"][0]["scriptPubKey"]["address"]
-        minerChangeAddress = raw_tx["vout"][1]["scriptPubKey"]["address"]
-        blockHash = raw_tx["blockhash"]
-        block_info = client.getblock(blockHash)
-        blockHeight = block_info["height"]
+        txid = str(transaction["txid"])
+        minerInputAddress = str(prev_tx["details"][prev_tx_vout]["address"])
+        minerInputAmount = float(prev_tx["amount"])
+        traderInputAddress = str(decoded_tx["vout"][0]["scriptPubKey"]["address"])
+        traderInputAmount = float(decoded_tx["vout"][0]["value"])
+        minerChangeAddress = str(decoded_tx["vout"][1]["scriptPubKey"]["address"])
+        minerChangeAmount = float(decoded_tx["vout"][1]["value"])
+        fee = float(transaction["fee"])
+        blockHeight = int(transaction["blockheight"])
+        blockHash = str(transaction["blockhash"])
 
-        # Write the data to ../out.txt in the specified format given in readme.md.
-        with open("../out.txt", "w") as f:
-            f.write(txid + "\n")
-            f.write(minerInputAddress + "\n")
-            f.write(minerInputAmount + "\n")
-            f.write(traderInputAddress + "\n")
-            f.write(traderInputAmount + "\n")
-            f.write(minerChangeAddress + "\n")
-            f.write(minerChangeAmount + "\n")
-            f.write(fee + "\n")
-            f.write(str(blockHeight) + "\n")
-            f.write(blockHash + "\n")
+        def format_number(num):
+            if num == int(num):
+                return str(int(num))
+            else:
+                return str(num)
+
+        with open("out.txt", "w") as f:
+            f.write(f"{txid}\n")
+            f.write(f"{minerInputAddress}\n")
+            f.write(f"{format_number(minerInputAmount)}\n")
+            f.write(f"{traderInputAddress}\n")
+            f.write(f"{format_number(traderInputAmount)}\n")
+            f.write(f"{minerChangeAddress}\n")
+            f.write(f"{format_number(minerChangeAmount)}\n")
+            f.write(f"{fee}\n")
+            f.write(f"{blockHeight}\n")
+            f.write(f"{blockHash}")
+
     except Exception as e:
         print("Error occurred: {}".format(e))
 
